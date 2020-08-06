@@ -26,7 +26,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+<<<<<<< Updated upstream
 public class MainActivity extends AppCompatActivity {
+=======
+public class MainActivity extends AppCompatActivity implements SensorEventListener {
+    private SensorManager sensorManagerTemp;
+    private Sensor temperature;
+    private TextView mainTemp;
+>>>>>>> Stashed changes
 
     private ListAdapter adapter;
 
@@ -38,6 +45,16 @@ public class MainActivity extends AppCompatActivity {
         initFab();
         initDrawer(toolbar);
         initList();
+<<<<<<< Updated upstream
+=======
+        initSensor();
+    }
+
+    private void initSensor(){
+        sensorManagerTemp = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        temperature = sensorManagerTemp.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
+        mainTemp=findViewById(R.id.temperatureSensor);
+>>>>>>> Stashed changes
     }
 
     private Toolbar initToolbar() {
@@ -168,4 +185,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+<<<<<<< Updated upstream
 }
+=======
+    @Override
+    public final void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Do something here if sensor accuracy changes.
+    }
+
+    @Override
+    public final void onSensorChanged(SensorEvent event) {
+        float temp = event.values[0];
+        mainTemp.setText((int) temp);
+        // Do something with this sensor data.
+    }
+
+    @Override
+    protected void onResume() {
+        // Register a listener for the sensor.
+        super.onResume();
+        sensorManagerTemp.registerListener(this, temperature, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    protected void onPause() {
+        // Be sure to unregister the sensor when the activity pauses.
+        super.onPause();
+        sensorManagerTemp.unregisterListener(this);
+    }
+
+}
+
+>>>>>>> Stashed changes
