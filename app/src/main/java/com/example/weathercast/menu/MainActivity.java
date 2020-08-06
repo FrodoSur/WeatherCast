@@ -1,12 +1,18 @@
 package com.example.weathercast.menu;
 
 import android.annotation.SuppressLint;
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.view.ContextMenu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Menu;
+import android.widget.TextView;
 
 import com.example.weathercast.R;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -26,14 +32,10 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
-<<<<<<< Updated upstream
-public class MainActivity extends AppCompatActivity {
-=======
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SensorManager sensorManagerTemp;
     private Sensor temperature;
     private TextView mainTemp;
->>>>>>> Stashed changes
 
     private ListAdapter adapter;
 
@@ -45,8 +47,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         initFab();
         initDrawer(toolbar);
         initList();
-<<<<<<< Updated upstream
-=======
         initSensor();
     }
 
@@ -54,7 +54,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         sensorManagerTemp = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         temperature = sensorManagerTemp.getDefaultSensor(Sensor.TYPE_AMBIENT_TEMPERATURE);
         mainTemp=findViewById(R.id.temperatureSensor);
->>>>>>> Stashed changes
     }
 
     private Toolbar initToolbar() {
@@ -101,6 +100,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         });
     }
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Обработка выбора пункта меню приложения (Activity)
@@ -154,6 +154,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
                 Snackbar.make(searchText, query, Snackbar.LENGTH_LONG).show();
                 return true;
             }
+
             // Реагирует на нажатие каждой клавиши
             @Override
             public boolean onQueryTextChange(String newText) {
@@ -181,13 +182,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             case R.id.update_context:
                 adapter.updateItem(String.format("Updated element %d", adapter.getMenuPosition()), adapter.getMenuPosition());
                 return true;
+
+        }
         return super.onContextItemSelected(item);
     }
 
 
-<<<<<<< Updated upstream
-}
-=======
     @Override
     public final void onAccuracyChanged(Sensor sensor, int accuracy) {
         // Do something here if sensor accuracy changes.
@@ -216,4 +216,3 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
 }
 
->>>>>>> Stashed changes
