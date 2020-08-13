@@ -60,6 +60,7 @@ public class weatherListAdapter extends RecyclerView.Adapter {
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+
         return new DayViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.list_item_layout,parent,false));
     }
 

@@ -1,12 +1,16 @@
 package com.example.weathercast.menu;
 
 import android.annotation.SuppressLint;
+import android.content.ComponentName;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.os.IBinder;
 import android.view.ContextMenu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -29,6 +33,7 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.weathercast.menu.MyService.ServiceBinder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,6 +42,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private SensorManager sensorManagerTemp;
     private Sensor temperature;
     private TextView mainTemp;
+    private boolean isBound = false;
+    private ServiceBinder boundService;
 
     private ListAdapter adapter;
 
@@ -57,6 +64,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         initDrawer(toolbar);
         initList();
         initSensor();
+        Intent intent = new Intent(MainActivity.this, MyService.class);
+        bindService(intent, boundServiceConnection, BIND_AUTO_CREATE);
+        mainTemp.setText(boundService.getCityWeather());
+        if (isBound){
+            unbindService(boundServiceConnection);
+        }
     }
 
     private void initSensor(){
@@ -222,6 +235,24 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onPause();
         sensorManagerTemp.unregisterListener(this);
     }
+    // Обработка соединения с сервисом
+    private ServiceConnection boundServiceConnection = new ServiceConnection() {
+
+        // При соединении с сервисом
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            boundService = (MyService.ServiceBinder) service;
+            isBound = boundService != null;
+        }
+
+        // При разрыве соединения с сервисом
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            isBound = false;
+            boundService = null;
+        }
+    };
+
 
 }
 
