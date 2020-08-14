@@ -12,3 +12,5 @@
 /captures
 .externalNativeBuild
 .cxx
+.idea/gradle.xml
+app/src/main/java/com/example/weathercast/menu/MainActivity.java
