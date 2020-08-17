@@ -1,24 +1,32 @@
 package com.example.weathercast.menu;
 
 import android.annotation.SuppressLint;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Menu;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.example.weathercast.R;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
@@ -34,6 +42,8 @@ import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.weathercast.menu.MyService.ServiceBinder;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +54,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private TextView mainTemp;
     private boolean isBound = false;
     private ServiceBinder boundService;
+    private LowBatteryReciever lowBatteryReciever=new LowBatteryReciever();
+    private NetworkReceiver networkReceiver = new NetworkReceiver();
 
     private ListAdapter adapter;
 
@@ -69,6 +81,37 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         mainTemp.setText(boundService.getCityWeather());
         if (isBound){
             unbindService(boundServiceConnection);
+        }
+        registerReceiver(lowBatteryReciever, new IntentFilter(Intent.ACTION_BATTERY_LOW));
+        initGetToken();
+        initNotificationChannel();
+    }
+
+    private void initGetToken() {
+        final EditText textToken = findViewById(R.id.textToken);
+        FirebaseInstanceId.getInstance().getInstanceId()
+                .addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                        if (!task.isSuccessful()) {
+                            Log.w("PushMessage", "getInstanceId failed", task.getException());
+                            return;
+                        }
+
+                        // Get new Instance ID token
+                        String token = task.getResult().getToken();
+                        textToken.setText(token);
+                    }
+                });
+    }
+
+    // инициализация канала нотификаций
+    private void initNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            int importance = NotificationManager.IMPORTANCE_LOW;
+            NotificationChannel channel = new NotificationChannel("2", "name", importance);
+            notificationManager.createNotificationChannel(channel);
         }
     }
 
@@ -228,6 +271,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         super.onResume();
         sensorManagerTemp.registerListener(this, temperature, SensorManager.SENSOR_DELAY_NORMAL);
     }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(lowBatteryReciever);
+    }
+
 
     @Override
     protected void onPause() {

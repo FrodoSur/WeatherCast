@@ -11,7 +11,7 @@ import com.example.weathercast.menu.dao.HistoryDao;
 import com.example.weathercast.menu.model.City;
 
 @Database(entities = {City.class}, version = 1)
-public class CityDatabase extends RoomDatabase {
+public abstract class CityDatabase extends RoomDatabase {
     public HistoryDao getHistoryDao() {
         return null;
     }
@@ -22,14 +22,4 @@ public class CityDatabase extends RoomDatabase {
         return null;
     }
 
-    @NonNull
-    @Override
-    protected InvalidationTracker createInvalidationTracker() {
-        return null;
-    }
-
-    @Override
-    public void clearAllTables() {
-
-    }
 }
