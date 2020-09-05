@@ -9,6 +9,12 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+<<<<<<< Updated upstream
+=======
+import android.location.Address;
+import android.location.Geocoder;
+import android.os.Build;
+>>>>>>> Stashed changes
 import android.os.Bundle;
 import android.os.IBinder;
 import android.view.ContextMenu;
@@ -16,9 +22,23 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Menu;
+<<<<<<< Updated upstream
 import android.widget.TextView;
 
 import com.example.weathercast.R;
+=======
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import com.example.weathercast.R;
+import com.example.weathercast.menu.data.WeatherRequest;
+import com.example.weathercast.menu.page.main.MainFragment;
+import com.example.weathercast.menu.reciever.LowBatteryReciever;
+import com.example.weathercast.menu.reciever.NetworkReceiver;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+>>>>>>> Stashed changes
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
@@ -30,28 +50,49 @@ import androidx.appcompat.widget.SearchView;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+<<<<<<< Updated upstream
 import com.example.weathercast.menu.MyService.ServiceBinder;
+=======
+
+import com.google.firebase.BuildConfig;
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
+>>>>>>> Stashed changes
 
 import java.util.ArrayList;
 import java.util.List;
 
+<<<<<<< Updated upstream
 public class MainActivity extends AppCompatActivity implements SensorEventListener {
     private SensorManager sensorManagerTemp;
     private Sensor temperature;
     private TextView mainTemp;
     private boolean isBound = false;
     private ServiceBinder boundService;
+=======
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
 
-    private ListAdapter adapter;
+public class MainActivity extends AppCompatActivity implements StartFragment  {
+    private NetworkReceiver wiFiStateChange = new NetworkReceiver();
+    private LowBatteryReciever powerConnected = new LowBatteryReciever();
+>>>>>>> Stashed changes
+
+    private static final String TAG = "WEATHER";
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.content_main);
 
+<<<<<<< Updated upstream
         RecyclerView weatherList = findViewById(R.id.recycler_list);
         weatherList.setAdapter(new weatherListAdapter());
         weatherList.setHasFixedSize(true);
@@ -121,108 +162,63 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
             }
 
         });
+=======
+        registerBroadcastReceivers();
+        initNotificationChannel();
+        startFragment(new MainFragment());
+>>>>>>> Stashed changes
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Обработка выбора пункта меню приложения (Activity)
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(wiFiStateChange);
+        unregisterReceiver(powerConnected);
     }
-
-    private void initList() {
-        RecyclerView recyclerView = findViewById(R.id.recycler_list);
-
-        // Эта установка повышает производительность системы
-        recyclerView.setHasFixedSize(true);
-
-        // Будем работать со встроенным менеджером
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        recyclerView.setLayoutManager(layoutManager);
-
-        // Устанавливаем адаптер
-        adapter = new ListAdapter(initData(), this);
-        recyclerView.setAdapter(adapter);
-    }
-
-    @SuppressLint("DefaultLocale")
-    private List<String> initData() {
-        List<String> list = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            list.add(String.format("Element %d", i));
-        }
-        return list;
-    }
-
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.main, menu);
-        // Поиск пункта меню поиска
-        MenuItem search = menu.findItem(R.id.action_search);
-        // Строка поиска
-        final SearchView searchText = (SearchView) search.getActionView();
-        searchText.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            // Реагирует на конец ввода поиска
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                Snackbar.make(searchText, query, Snackbar.LENGTH_LONG).show();
-                return true;
+    public void onBackPressed() {
+        Fragment activeFragment = getSupportFragmentManager().findFragmentById(R.id.container_for_fragment);
+        // Проверяем, что активный фрагмент является фрагментов класса MainScreenFragment
+        if (activeFragment!= null && activeFragment.getClass() == MainFragment.class) {
+            // Вызываем у активного фрагмента метод onBackPressed
+            if (!((MainFragment) activeFragment).onBackPressed()) {
+                finish();
             }
-
-            // Реагирует на нажатие каждой клавиши
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                return true;
-            }
-        });
-
-        return true;
-    }
-
-    @Override
-    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenu.ContextMenuInfo menuInfo) {
-        super.onCreateContextMenu(menu, v, menuInfo);
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.context_menu, menu);
-    }
-
-
-    @SuppressLint("DefaultLocale")
-    @Override
-    public boolean onContextItemSelected(@NonNull MenuItem item) {
-        ContextMenu.ContextMenuInfo menuInfo = item.getMenuInfo();
-        int id = item.getItemId();
-        switch (id) {
-            case R.id.update_context:
-                adapter.updateItem(String.format("Updated element %d", adapter.getMenuPosition()), adapter.getMenuPosition());
-                return true;
-
+        } else {
+            super.onBackPressed();
         }
-        return super.onContextItemSelected(item);
-    }
-
-
-    @Override
-    public final void onAccuracyChanged(Sensor sensor, int accuracy) {
-        // Do something here if sensor accuracy changes.
     }
 
     @Override
-    public final void onSensorChanged(SensorEvent event) {
-        float temp = event.values[0];
-        mainTemp.setText((int) temp);
-        // Do something with this sensor data.
+    public void startFragment(Fragment fragment) {
+        String backStateName = fragment.getClass().getName();
+
+        if (fragment.getClass().equals(MainFragment.class)) {
+            getSupportFragmentManager().popBackStackImmediate(MainFragment.class.getName(), FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        }
+        FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
+        fragmentTransaction.replace(R.id.container_for_fragment, fragment);
+        fragmentTransaction.addToBackStack(backStateName);
+        fragmentTransaction.commit();
+    }
+
+    private void initNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            int importance = NotificationManager.IMPORTANCE_LOW;
+            NotificationChannel channel = new NotificationChannel("2", "name", importance);
+            notificationManager.createNotificationChannel(channel);
+        }
+    }
+
+    private void registerBroadcastReceivers() {
+        registerReceiver(wiFiStateChange, new IntentFilter("android.net.conn.CONNECTIVITY_CHANGE"));
+        registerReceiver(powerConnected, new IntentFilter(Intent.ACTION_POWER_CONNECTED));
     }
 
     @Override
+<<<<<<< Updated upstream
     protected void onResume() {
         // Register a listener for the sensor.
         super.onResume();
@@ -234,25 +230,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Be sure to unregister the sensor when the activity pauses.
         super.onPause();
         sensorManagerTemp.unregisterListener(this);
+=======
+    public void onPointerCaptureChanged(boolean hasCapture) {
+
+>>>>>>> Stashed changes
     }
-    // Обработка соединения с сервисом
-    private ServiceConnection boundServiceConnection = new ServiceConnection() {
-
-        // При соединении с сервисом
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            boundService = (MyService.ServiceBinder) service;
-            isBound = boundService != null;
-        }
-
-        // При разрыве соединения с сервисом
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            isBound = false;
-            boundService = null;
-        }
-    };
-
-
 }
 

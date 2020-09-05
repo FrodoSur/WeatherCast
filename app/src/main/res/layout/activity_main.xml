@@ -8,10 +8,6 @@
     android:fitsSystemWindows="true"
     tools:openDrawer="start">
 
-    <include
-        layout="@layout/app_bar_main"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
     <com.google.android.material.navigation.NavigationView
         android:id="@+id/nav_view"
@@ -19,6 +15,11 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
+<<<<<<< Updated upstream
         app:headerLayout="@layout/nav_header_main"
         app:menu="@menu/activity_main_drawer" />
+=======
+        app:headerLayout="@layout/nav_header_main" />
+
+>>>>>>> Stashed changes
 </androidx.drawerlayout.widget.DrawerLayout>
