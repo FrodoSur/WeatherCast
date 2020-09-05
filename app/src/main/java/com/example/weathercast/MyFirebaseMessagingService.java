@@ -10,7 +10,8 @@ import com.google.firebase.messaging.FirebaseMessagingService;
 import com.google.firebase.messaging.RemoteMessage;
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
     final private String TAG = "WEATHER";
-    private int messageId = 0;
+    private int messageID = 0;
+
     public MyFirebaseMessagingService() {
     }
     @Override

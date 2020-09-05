@@ -20,7 +20,7 @@ public class HourlyForecastAdapter extends RecyclerView.Adapter<HourlyForecastAd
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_for_hourly_forecast, parent, false);
+        View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_hourly, parent, false);
         return new ViewHolder(v);
     }
 

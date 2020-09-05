@@ -43,7 +43,7 @@ public class CityChose extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, final ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_city_selection, container, false);
+        View view = inflater.inflate(R.layout.fragment_city_chose, container, false);
 
         setButtonListeners(view);
         initAutoCompeteTextView(container, view);
@@ -52,24 +52,6 @@ public class CityChose extends Fragment {
     }
 
     private void setButtonListeners(View view) {
-        //Устанавливаем слушатель для кнопки "назад"
-        MaterialButton backButton = view.findViewById(R.id.backButton);
-        backButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                requireActivity().onBackPressed();
-            }
-        });
-
-        //Устанавливаем слушатель для кнопки "удалить"
-        MaterialButton deleteButton = view.findViewById(R.id.deleteHistory);
-        deleteButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                historySource.deleteHistory();
-                historyRecyclerAdapter.notifyDataSetChanged();
-            }
-        });
 
         MaterialButton mapsButton = view.findViewById(R.id.mapButton);
         mapsButton.setOnClickListener(new View.OnClickListener() {
@@ -94,15 +76,13 @@ public class CityChose extends Fragment {
     }
 
     private void initAutoCompeteTextView(final ViewGroup container, View view) {
-        // Инициализируем AutoCompleteTextView, передаем массив городов
         AutoCompleteTextView autoCompleteTextView = view.findViewById(R.id.textInputCitySelection);
-        autoCompleteTextView.setThreshold(1);   //Минимальное кол-во символов до начала показа подходящих вариантов
+        autoCompleteTextView.setThreshold(1);
         String[] cities = getResources().getStringArray(R.array.arrayOfCity);
         List<String> citiesList = Arrays.asList(cities);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_dropdown_item_1line, citiesList);
         autoCompleteTextView.setAdapter(adapter);
 
-        // Устанавливаем слушатель на прикосновение к строке ввода города, чтобы сразу открывался весь доступный список городов
         autoCompleteTextView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
@@ -112,7 +92,6 @@ public class CityChose extends Fragment {
             }
         });
 
-        // Устанавливаем слушатель на выбор города, с последующим переходом на основной экран
         autoCompleteTextView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -124,7 +103,6 @@ public class CityChose extends Fragment {
                     }
                 }
 
-                //Добавляем город в базу данных и обновляем Recycler
                 City city = new City();
                 addCityToHistory(parent, position, city);
                 saveToSharedPreferences(city);

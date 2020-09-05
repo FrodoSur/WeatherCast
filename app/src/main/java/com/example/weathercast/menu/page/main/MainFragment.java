@@ -1,66 +1,388 @@
 package com.example.weathercast.menu.page.main;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+import android.widget.Toolbar;
 
 import com.example.weathercast.R;
+import com.example.weathercast.menu.StartFragment;
+import com.example.weathercast.menu.data.WeatherRequest;
+import com.example.weathercast.menu.interfaceForRequest.weatherRequestCoord;
+import com.example.weathercast.menu.interfaceForRequest.weatherRequestName;
+import com.example.weathercast.menu.page.cityChose.CityChose;
+import com.example.weathercast.menu.page.cityChose.DataForHistory.App;
+import com.example.weathercast.menu.page.cityChose.DataForHistory.City;
+import com.example.weathercast.menu.page.cityChose.DataForHistory.CityDao;
+import com.example.weathercast.menu.page.cityChose.DataForHistory.HistorySource;
+import com.example.weathercast.menu.page.main.hourlyForecast.HourlyForecastAdapter;
+import com.example.weathercast.menu.page.main.hourlyForecast.SourceOfHourlyForecastCard;
+import com.example.weathercast.menu.page.main.weekForecast.SourceOfWeekForecastCard;
+import com.example.weathercast.menu.page.main.weekForecast.WeekForecastAdapter;
+import com.google.android.material.navigation.NavigationView;
+import com.google.android.material.snackbar.BaseTransientBottomBar;
+import com.google.android.material.snackbar.Snackbar;
+import com.google.firebase.BuildConfig;
+import com.squareup.picasso.Picasso;
+import com.squareup.picasso.Target;
 
-/**
- * A simple {@link Fragment} subclass.
- * Use the {@link MainFragment#newInstance} factory method to
- * create an instance of this fragment.
- */
-public class MainFragment extends Fragment {
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
-    // TODO: Rename parameter arguments, choose names that match
-    // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
-    private static final String ARG_PARAM1 = "param1";
-    private static final String ARG_PARAM2 = "param2";
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
-    // TODO: Rename and change types of parameters
-    private String mParam1;
-    private String mParam2;
+import static android.content.Context.MODE_PRIVATE;
 
-    public MainFragment() {
-        // Required empty public constructor
-    }
+public class MainFragment extends Fragment implements NavigationView.OnNavigationItemSelectedListener {
 
-    /**
-     * Use this factory method to create a new instance of
-     * this fragment using the provided parameters.
-     *
-     * @param param1 Parameter 1.
-     * @param param2 Parameter 2.
-     * @return A new instance of fragment MainFragment.
-     */
-    // TODO: Rename and change types and number of parameters
-    public static MainFragment newInstance(String param1, String param2) {
-        MainFragment fragment = new MainFragment();
-        Bundle args = new Bundle();
-        args.putString(ARG_PARAM1, param1);
-        args.putString(ARG_PARAM2, param2);
-        fragment.setArguments(args);
-        return fragment;
+    private final String TAG = "WEATHER";
+    private final String baseURL = "https://api.openweathermap.org/";
+    private final double absoluteZero = -273.15;
+
+    private TextView cityName;
+    private TextView currentTemperature;
+    private TextView currentWeatherDescription;
+    private ImageView currentWeatherIcon;
+
+    private DrawerLayout drawer;
+    private Toolbar toolbar;
+
+    private weatherRequestName weatherRequestByCityName;
+    private weatherRequestCoord weatherRequestByCoordinates;
+
+    private SharedPreferences sharedPreferences;
+
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getArguments() != null) {
-            mParam1 = getArguments().getString(ARG_PARAM1);
-            mParam2 = getArguments().getString(ARG_PARAM2);
+    public void onViewCreated(@NonNull final View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+
+        initView(view);
+        loadDataFromSharedPreferences(view);
+        initToolbar(view);
+        initNavigationView(view);
+        setListeners(view);
+
+        //Инициализируем RecyclerView с карточками прогноза на неделю и почасовыми
+        SourceOfWeekForecastCard sourceData = new SourceOfWeekForecastCard(getResources());
+        initWeekForecastRecyclerView(sourceData.build(), view);
+        initHourlyForecastRecyclerView((new SourceOfHourlyForecastCard(getResources())).build(), view);
+
+        initRetrofit();
+        requestRetrofitByCityName(sharedPreferences.getString("currentCity", "Saint Petersburg,RU"));
+    }
+
+    private void loadDataFromSharedPreferences(@NonNull View view) {
+        sharedPreferences = requireActivity().getPreferences(MODE_PRIVATE);
+        cityName.setText(sharedPreferences.getString("currentCity", "Saint Petersburg,RU"));
+        currentTemperature.setText(sharedPreferences.getString("lastTemperature", "-"));
+
+        //Получаем путь к сохраненной иконке погоды. При первом заупуске приложения путь еще не сохранен, поэтому проверяем на null
+        String pathToWeatherIcon = sharedPreferences.getString("lastWeatherIcon", null);
+        if (pathToWeatherIcon != null){
+            loadImageFromStorage(pathToWeatherIcon);
         }
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_main, container, false);
+    private void initView(@NonNull View view) {
+        cityName = view.findViewById(R.id.cityName);
+        currentTemperature = view.findViewById(R.id.currentTemperature);
+        currentWeatherDescription =  view.findViewById(R.id.currentWeatherDescription);
+        currentWeatherIcon = view.findViewById(R.id.currentWeatherIcon);
     }
+
+    private void initRetrofit() {
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(baseURL)
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+        weatherRequestByCityName = retrofit.create(weatherRequestName.class);
+        weatherRequestByCoordinates = retrofit.create(weatherRequestCoord.class);
+    }
+
+    private void requestRetrofitByCityName(String cityCountry) {
+        weatherRequestByCityName.loadWeather(cityCountry, BuildConfig.WEATHER_API_KEY)
+                .enqueue(new Callback<WeatherRequest>() {
+                    @Override
+                    public void onResponse(Call<WeatherRequest> call, Response<WeatherRequest> response) {
+                        if (response.body() != null) {
+                            loadAndSetCurrentWeatherIcon(response);
+
+                            String temp = String.format("%+.0f", response.body().getMain().getTemp() + absoluteZero);
+                            currentTemperature.setText(temp);
+                            sharedPreferences.edit().putString("lastTemperature", temp).apply();
+
+                            currentWeatherDescription.setText(StringUtils.capitalize(response.body().getWeather().get(0).getDescription()));
+
+                            showSnackbar("Update");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<WeatherRequest> call, Throwable t) {
+                        showSnackbar("Fail update");
+                    }
+                });
+    }
+
+    private void requestRetrofitByCoordinates(String latitude, String longitude) {
+        weatherRequestByCoordinates.loadWeather(latitude, longitude, BuildConfig.WEATHER_API_KEY)
+                .enqueue(new Callback<WeatherRequest>() {
+                    @Override
+                    public void onResponse(Call<WeatherRequest> call, Response<WeatherRequest> response) {
+                        if (response.body() != null) {
+                            loadAndSetCurrentWeatherIcon(response);
+
+                            String nameWithCountry = response.body().getName() + "," + response.body().getSys().getCountry();
+                            String temp = String.format("%+.0f", response.body().getMain().getTemp() + absoluteZero);
+                            currentTemperature.setText(temp);
+                            currentWeatherDescription.setText(StringUtils.capitalize(response.body().getWeather().get(0).getDescription()));
+                            cityName.setText(nameWithCountry);
+
+                            sharedPreferences.edit().putString("lastTemperature", temp).apply();
+                            sharedPreferences.edit().putString("currentCity", nameWithCountry).apply();
+
+                            addCityToHistory(nameWithCountry);
+
+                            showSnackbar("Update");
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<WeatherRequest> call, Throwable t) {
+                        Log.e(TAG, "onFailure: " + t.toString());
+                        showSnackbar("Fail update");
+                    }
+                });
+    }
+
+    private void showSnackbar(String message) {
+        Snackbar.make(requireView(), message, BaseTransientBottomBar.LENGTH_SHORT).show();
+
+    }
+
+
+    private void setListeners(@NonNull final View view) {
+        //Устанавливаем слушатель для SwipeRefresh
+        final SwipeRefreshLayout swipeRefreshLayout = (SwipeRefreshLayout) view.findViewById(R.id.swipe_refresh);
+        swipeRefreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestRetrofitByCityName("Saint Petersburg,RU");
+
+                //Устанавливаем задержку анимации обновления страницы
+                new Handler().postDelayed(new Runnable() {
+                    @Override public void run() {
+                        swipeRefreshLayout.setRefreshing(false);
+                    }
+                }, 1000);
+            }
+        });
+
+        //Устанавливаем слушатель для FragmentResult
+        getParentFragmentManager().setFragmentResultListener("coord", this, new FragmentResultListener() {
+            @Override
+            public void onFragmentResult(@NonNull String requestKey, @NonNull Bundle result) {
+                String lat = result.getString("lat");
+                String lon = result.getString("lon");
+                Log.d(TAG, "onFragmentResult: "+ lat + " ," + lon);
+                requestRetrofitByCoordinates(lat, lon);
+            }
+        });
+
+    }
+
+    private void loadAndSetCurrentWeatherIcon(Response<WeatherRequest> response) {
+        Picasso.get()
+                .load("https://openweathermap.org/img/wn/" + response.body().getWeather().get(0).getIcon() +"@4x.png")
+                .into(new Target() {
+                    @Override
+                    public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from) {
+                        currentWeatherIcon.setImageBitmap(bitmap);
+                        //Сохраняем картинку в память, путь к картинке сохраняем в SharedPreferences
+                        String path = saveToInternalStorage(bitmap);
+                        sharedPreferences.edit().putString("lastWeatherIcon", path).apply();
+                    }
+
+                    @Override
+                    public void onBitmapFailed(Exception e, Drawable errorDrawable) {
+                        Log.d(TAG, "onBitmapFailed: Fail");
+                    }
+
+                    @Override
+                    public void onPrepareLoad(Drawable placeHolderDrawable) {
+                    }
+                });
+
+    }
+
+    private String saveToInternalStorage(Bitmap bitmapImage) {
+        File directory = requireActivity().getDir("weatherIcon", Context.MODE_PRIVATE);
+        File file = new File(directory,"weatherIcon.png");
+
+        try (FileOutputStream fileOutputStream = new FileOutputStream(file)){
+            // Используем метод сжатия BitMap объекта для записи в OutputStream
+            bitmapImage.compress(Bitmap.CompressFormat.PNG, 100, fileOutputStream);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return directory.getAbsolutePath();
+    }
+
+    private void loadImageFromStorage(String path) {
+        try {
+            File file = new File(path, "weatherIcon.png");
+            Bitmap bitmap = BitmapFactory.decodeStream(new FileInputStream(file));
+            currentWeatherIcon.setImageBitmap(bitmap);
+        }
+        catch (FileNotFoundException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private void initNavigationView(@NonNull View view) {
+        drawer = view.findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(getActivity(), drawer, toolbar, R.string.open, R.string.open);
+        drawer.addDrawerListener(toggle);
+        toggle.syncState();
+        NavigationView navigationView = (NavigationView) view.findViewById(R.id.nav_view);
+        navigationView.setNavigationItemSelectedListener(this);
+    }
+
+    private void initToolbar(@NonNull View view) {
+        toolbar = view.findViewById(R.id.main_fragment_toolbar);
+        ((AppCompatActivity) requireContext()).setSupportActionBar(toolbar);
+        ((AppCompatActivity) requireContext()).getSupportActionBar().setDisplayShowTitleEnabled(false);
+        setHasOptionsMenu(true);
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        inflater.inflate(R.menu.main_fragment_toolbar_menu, menu);
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        int id = item.getItemId();
+        switch (id){
+            case (R.id.main_fragment_toolbar_change_city):
+                ((StartFragment) requireContext()).startFragment(new CityChose());
+                break;
+            default:break;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void initWeekForecastRecyclerView(SourceOfWeekForecastCard sourceData, View view){
+        RecyclerView recyclerView = view.findViewById(R.id.weekForecast);
+
+        // Эта установка служит для повышения производительности системы
+        recyclerView.setHasFixedSize(true);
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this.getContext());
+        layoutManager.setOrientation(RecyclerView.HORIZONTAL);
+        recyclerView.setLayoutManager(layoutManager);
+
+        WeekForecastAdapter adapter = new WeekForecastAdapter(sourceData);
+        recyclerView.setAdapter(adapter);
+    }
+    private void initHourlyForecastRecyclerView(SourceOfHourlyForecastCard sourceData, View view){
+        RecyclerView recyclerView = view.findViewById(R.id.hourlyForecast);
+
+        // Эта установка служит для повышения производительности системы
+        recyclerView.setHasFixedSize(true);
+
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this.getContext());
+        layoutManager.setOrientation(RecyclerView.VERTICAL);
+        recyclerView.setLayoutManager(layoutManager);
+
+        HourlyForecastAdapter adapter = new HourlyForecastAdapter(sourceData);
+        recyclerView.setAdapter(adapter);
+    }
+
+    @Override
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+        return false;
+    }
+
+
+    public boolean onBackPressed(){
+        if (drawer !=null && drawer.isDrawerOpen(GravityCompat.START)) {
+            drawer.closeDrawer(GravityCompat.START);
+            return true;
+        } else {
+
+            return false;
+        }
+    }
+
+    private void addCityToHistory(String name) {
+        CityDao cityDao = App.getInstance().getCityHistoryDao();
+        HistorySource historySource = new HistorySource(cityDao);
+
+        List<City> listOfCity = historySource.getListOfCity();
+        for (City city : listOfCity) {
+            if (city.nameOfCity.equals(name)) {
+                historySource.deleteCity(city);
+            }
+        }
+
+        City city = new City();
+
+        city.nameOfCity = name;
+        city.date = getCurrentDate();
+        city.temperature = "-";
+
+        historySource.addCity(city);
+    }
+
+    private String getCurrentDate() {
+        DateFormat dateFormat = new SimpleDateFormat("dd.MM.yyyy", Locale.getDefault());
+        return dateFormat.format(new Date());
+    }
+
 }
